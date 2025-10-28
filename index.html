@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI by Aksh</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif';
+            background-color: #f7fafc;
+        }
+
+        /* Loading indicator spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Concept Button Styles */
+        .concept-btn {
+            background-color: #e0f2fe; /* Light Blue */
+            color: #0369a1; /* Darker Blue */
+            padding: 0.5rem 1rem;
+            border-radius: 9999px; /* Rounded pill shape */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .concept-btn:hover:not(.mastered) {
+            background-color: #bae6fd;
+        }
+        
+        .concept-btn.mastered {
+            background-color: #10b981; /* Green */
+            color: white;
+            cursor: default;
+            border-color: #059669;
+        }
+        
+        .concept-btn.active-explaining {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+        }
+        
+        /* Image Placeholder for Vibe */
+        .vibe-placeholder {
+            min-height: 200px;
+        }
+
+        /* Basic Markdown rendering for structured text */
+        #answerContent h1, #answerContent h2, #answerContent h3 {
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        #answerContent h2 { font-size: 1.5rem; }
+        #answerContent ul { list-style: disc; margin-left: 1.5rem; padding-left: 0.5rem; }
+        #answerContent ol { list-style: decimal; margin-left: 1.5rem; padding-left: 0.5rem; }
+
+    </style>
+</head>
+<body class="p-4 sm:p-8 bg-gray-100 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header: Updated Name --><header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-blue-800">AI by Aksh 🏛️</h1>
+            <p class="text-gray-600 mt-2">Ask any historical question to get a grounded answer and unlock powerful learning tools.</p>
+        </header>
+
+        <!-- Question Input --><div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <label for="historyQuery" class="block text-lg font-medium text-gray-700 mb-3">Your History Question:</label>
+            <textarea id="historyQuery" rows="3" placeholder="e.g., What caused the fall of the Roman Empire?"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out resize-none"></textarea>
+            
+            <div class="flex justify-end mt-4">
+                <button id="queryButton" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 ease-in-out flex items-center" onclick="getHistoricalAnswer()">
+                    <span id="buttonText">Get Historical Answer</span>
+                    <div id="loadingIndicator" class="spinner ml-2 hidden"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Output Container --><div id="outputContainer" class="hidden">
+            <div class="space-y-6">
+
+                <!-- Generated Vibe Image --><div class="bg-white p-4 rounded-xl shadow-lg border-2 border-dashed border-gray-300">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="mr-2">🎨</span> Historical Scene Vibe (Image)
+                        <button id="vibeButton" class="ml-auto text-sm text-blue-600 hover:text-blue-800 focus:outline-none" onclick="generateContextualVibe()" disabled>
+                            Re-generate Vibe
+                        </button>
+                    </h2>
+                    <div id="vibeImageContainer" class="w-full aspect-video flex justify-center items-center bg-gray-50 rounded-lg overflow-hidden vibe-placeholder">
+                        <p class="text-gray-400 text-center p-4">A custom, contextual image will appear here automatically.</p>
+                    </div>
+                </div>
+
+                <!-- 🔍 Concept Gate (Active Learning Step) --><div id="conceptGateContainer" class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-indigo-700 mb-4 flex items-center">
+                        <span class="mr-2">🔍</span> Knowledge Pre-check
+                    </h2>
+                    <p id="conceptGateMessage" class="text-gray-600 mb-4">Click each key concept below to get a quick definition. Master all concepts to unlock the full historical answer.</p>
+                    
+                    <div id="conceptTagsContainer" class="flex flex-wrap gap-3 mb-6 min-h-[4rem]">
+                        <!-- Concept buttons will be injected here --></div>
+
+                    <div id="conceptExplanationPanel" class="p-4 border-l-4 border-indigo-400 bg-indigo-50 text-indigo-800 rounded-r-lg hidden">
+                        <h3 class="font-bold text-lg mb-1">Concept Explanation:</h3>
+                        <div id="explanationContent">Click a concept above to learn about it.</div>
+                    </div>
+                </div>
+
+                <!-- Main Answer Section --><div class="bg-white p-6 rounded-xl shadow-lg transition duration-500 hidden" id="answerBox">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Historical Answer (Unlocked!)</h2>
+                    <div id="answerContent" class="text-gray-700 leading-relaxed min-h-[100px] text-justify">
+                        <!-- Answer will be injected here --></div>
+                    <div id="sourcesContainer" class="mt-4 border-t pt-4 text-sm text-gray-500">
+                        <!-- Sources will be injected here --></div>
+                </div>
+
+                <!-- Feature Buttons & Outputs --><div id="featureButtonsContainer" class="bg-white p-6 rounded-xl shadow-lg hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <!-- Summarize Button --><button id="summarizeButton" class="feature-btn bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg flex items-center justify-center disabled:opacity-50" 
+                                onclick="summarizeAnswer()" disabled>
+                            <span class="mr-2">✨</span> Summarize Key Points
+                        </button>
+                        
+                        <!-- Read Aloud Button --><button id="readAloudButton" class="feature-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center disabled:opacity-50" 
+                                onclick="readAnswerAloud()" disabled>
+                            <span class="mr-2">🔊</span> Read Answer Aloud
+                        </button>
+
+                        <!-- Quiz Button --><button id="quizButton" class="feature-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center disabled:opacity-50" 
+                                onclick="generateQuizQuestion()" disabled>
+                            <span class="mr-2">❓</span> Generate Quiz Question
+                        </button>
+                    </div>
+
+                    <!-- Audio Player --><div id="audioPlayerContainer" class="mt-4 hidden p-3 bg-gray-50 rounded-lg">
+                        <audio id="audioPlayer" controls class="w-full"></audio>
+                    </div>
+
+                    <!-- Summary Output --><div id="summaryOutput" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-300 hidden">
+                        <h3 class="font-bold text-yellow-800 mb-2">Key Takeaways:</h3>
+                        <div id="summaryContent"></div>
+                    </div>
+
+                    <!-- Quiz Output --><div id="quizOutput" class="mt-4 p-4 bg-red-50 rounded-lg border border-red-300 hidden">
+                        <h3 class="font-bold text-red-800 mb-3">Knowledge Check:</h3>
+                        <div id="quizContent"></div>
+                        <div id="quizResult" class="mt-3 font-semibold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Firebase, API Calls, and Logic --><script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Initialization and Auth (Runs on client, needed for persistence) ---
+
+        // Global Firebase variables (provided by Canvas environment, but unused here)
+        const appId = 'default-app-id';
+        const firebaseConfig = null;
+        const initialAuthToken = null;
+        
+        let db;
+        let auth;
+        let userId;
+        let currentAnswerText = "";
+        let currentQuizAnswer = "";
+        let conceptsToMaster = []; 
+        let masteredConcepts = new Set(); 
+        let isFullAnswerRevealed = false;
+
+        setLogLevel('Debug');
+
+        async function initFirebase() {
+            // Firebase is now non-functional on client-side due to missing config 
+            // but the placeholders remain for future backend integration.
+            userId = crypto.randomUUID();
+        }
+        
+        initFirebase();
+
+        // --- API & Utility Functions ---
+
+        const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
+        const IMAGE_MODEL = 'imagen-3.0-generate-002';
+        const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+        const PROXY_ENDPOINT = '/api/gemini'; // Endpoint on your Node.js server
+
+        async function safeFetch(url, options, maxRetries = 3) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status: ${response.status}. Check your Node.js server console.`);
+                    }
+                    return response;
+                } catch (error) {
+                    console.error(`Fetch attempt ${attempt + 1} failed:`, error);
+                    if (attempt === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+        
+        // Fix for btoa InvalidCharacterError on non-Latin-1 strings
+        function safeBtoa(str) {
+            try {
+                return btoa(str);
+            } catch (e) {
+                if (e.name === 'InvalidCharacterError') {
+                    const utf8Bytes = new TextEncoder().encode(str);
+                    const binaryString = String.fromCodePoint(...utf8Bytes);
+                    return btoa(binaryString);
+                }
+                throw e;
+            }
+        }
+
+        function setAppState(isLoading, message = "Getting Historical Answer...") {
+            const button = document.getElementById('queryButton');
+            const buttonText = document.getElementById('buttonText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            
+            button.disabled = isLoading;
+            buttonText.textContent = isLoading ? message : "Get Historical Answer";
+            loadingIndicator.classList.toggle('hidden', !isLoading);
+
+            if (!isFullAnswerRevealed) {
+                document.querySelectorAll('.feature-btn').forEach(btn => btn.disabled = isLoading || !isFullAnswerRevealed);
+                document.getElementById('vibeButton').disabled = isLoading || !isFullAnswerRevealed;
+            }
+        }
+
+        function enableFeatureButtons() {
+            document.querySelectorAll('.feature-btn').forEach(btn => btn.disabled = false);
+            document.getElementById('vibeButton').disabled = false;
+        }
+
+        // --- Core Q&A Function (via Proxy) ---
+
+        window.getHistoricalAnswer = async function() {
+            const query = document.getElementById('historyQuery').value.trim();
+            if (!query) return;
+
+            // Reset state
+            isFullAnswerRevealed = false;
+            currentAnswerText = "";
+            masteredConcepts.clear();
+            conceptsToMaster = [];
+
+            setAppState(true, "Searching the Archives...");
+            document.getElementById('outputContainer').classList.remove('hidden');
+            document.getElementById('answerBox').classList.add('hidden'); 
+            document.getElementById('featureButtonsContainer').classList.add('hidden'); 
+            document.getElementById('answerContent').innerHTML = `<p class="text-gray-500">Awaiting concept mastery...</p>`;
+            document.getElementById('sourcesContainer').innerHTML = '';
+            document.getElementById('vibeImageContainer').innerHTML = `<p class="text-gray-400 text-center p-4">Preparing visual context...</p>`;
+            document.getElementById('conceptExplanationPanel').classList.add('hidden');
+            document.getElementById('explanationContent').innerHTML = `Click a concept above to learn about it.`;
+            document.getElementById('conceptTagsContainer').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Extracting key concepts...</span>`;
+            
+            // Clear previous outputs
+            document.getElementById('summaryOutput').classList.add('hidden');
+            document.getElementById('quizOutput').classList.add('hidden');
+            document.getElementById('audioPlayerContainer').classList.add('hidden');
+
+            const systemPrompt = "You are a world-class history tutor. Provide a detailed, engaging, and well-structured answer to the user's historical question. FORMAT the answer using clear Markdown headings (##), numbered lists, and bullet points to maximize readability and student engagement. DO NOT use dense paragraphs or essay format.";
+
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    currentAnswerText = candidate.content.parts[0].text;
+                    
+                    // Display sources (Grounding metadata comes back from the server)
+                    let sourcesHtml = 'Sources: ';
+                    const groundingMetadata = candidate.groundingMetadata;
+                    let sources = [];
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attr => attr.web)
+                            .filter(web => web && web.uri && web.title);
+                    }
+                    
+                    if (sources.length > 0) {
+                        sourcesHtml += sources.map(source => 
+                            `<a href="${source.uri}" target="_blank" class="text-blue-500 hover:underline">${source.title}</a>`
+                        ).join(' | ');
+                    } else {
+                        sourcesHtml += 'No specific sources found.';
+                    }
+                    document.getElementById('sourcesContainer').innerHTML = sourcesHtml;
+                    
+                    // 1. Run Concept Gate
+                    await generateConceptGate(currentAnswerText);
+
+                    // 2. Automatically trigger image generation 
+                    await generateContextualVibe(currentAnswerText);
+
+                } else if (result.error) {
+                    console.error("Main Q&A Proxy Error:", result.error);
+                     document.getElementById('answerContent').innerHTML = `<p class="text-red-500">Proxy Error: ${result.error}. Check your Node.js console.</p>`;
+                } else {
+                    document.getElementById('answerContent').innerHTML = `<p class="text-red-500">Error: Could not generate a historical answer. Response was empty.</p>`;
+                }
+            } catch (error) {
+                console.error("Main Q&A Fetch Error:", error);
+                document.getElementById('answerContent').innerHTML = `<p class="text-red-500">A network error occurred. Ensure your Node.js server is running and accessible.</p>`;
+            } finally {
+                setAppState(false);
+            }
+        };
+
+        // --- Concept Gate Logic (via Proxy) ---
+
+        async function generateConceptGate(text) {
+            document.getElementById('conceptGateContainer').classList.remove('hidden');
+            document.getElementById('conceptExplanationPanel').classList.remove('hidden');
+            
+            const systemPrompt = "Analyze the provided historical text and extract 5 to 7 of the most important key concepts, people, or events. Only return the terms as a JSON array of strings.";
+            
+            const schema = {
+                type: "ARRAY",
+                items: { type: "STRING" }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: `Extract key concepts from this text:\n\n${text}` }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            try {
+                const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                const concepts = JSON.parse(jsonText);
+                conceptsToMaster = concepts;
+                
+                if (concepts && concepts.length > 0) {
+                    const tagsHtml = concepts.map(concept => `
+                        <button id="concept-${safeBtoa(concept)}" class="concept-btn" onclick="explainConcept(this, '${concept.replace(/'/g, "\\'")}')">
+                            ${concept}
+                        </button>
+                    `).join('');
+                    
+                    document.getElementById('conceptTagsContainer').innerHTML = tagsHtml;
+                } else {
+                    document.getElementById('conceptTagsContainer').innerHTML = `<p class="text-red-500">Could not extract concepts. Unlocking answer.</p>`;
+                    revealFullAnswer();
+                }
+
+            } catch (error) {
+                console.error("Concept Gate error:", error);
+                document.getElementById('conceptTagsContainer').innerHTML = `<p class="text-red-500">Error generating concept tags. Unlocking answer.</p>`;
+                revealFullAnswer();
+            }
+        }
+        
+        window.explainConcept = async function(buttonElement, concept) {
+            if (buttonElement.classList.contains('mastered')) return;
+
+            document.querySelectorAll('.concept-btn').forEach(btn => btn.classList.remove('active-explaining'));
+            buttonElement.classList.add('active-explaining');
+
+            document.getElementById('explanationContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Explaining "${concept}"...</span>`;
+            
+            const systemPrompt = `You are a concise tutor. Provide a single, 1-2 sentence definition or explanation for the concept: "${concept}", drawing context from the main historical answer provided below.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Original Answer Context:\n\n${currentAnswerText}` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                 const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const explanation = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (explanation) {
+                    document.getElementById('explanationContent').innerHTML = explanation;
+                    
+                    buttonElement.classList.remove('active-explaining');
+                    buttonElement.classList.add('mastered');
+                    masteredConcepts.add(concept);
+                    
+                    if (masteredConcepts.size === conceptsToMaster.length) {
+                        revealFullAnswer();
+                    }
+                } else {
+                    document.getElementById('explanationContent').innerHTML = `<p class="text-red-500">Could not generate explanation for ${concept}.</p>`;
+                }
+            } catch (error) {
+                console.error("Concept explanation error:", error);
+                document.getElementById('explanationContent').innerHTML = `<p class="text-red-500">An error occurred while explaining the concept.</p>`;
+            }
+        }
+        
+        function revealFullAnswer() {
+            isFullAnswerRevealed = true;
+            document.getElementById('answerBox').classList.remove('hidden');
+            document.getElementById('featureButtonsContainer').classList.remove('hidden');
+            document.getElementById('answerContent').innerHTML = currentAnswerText;
+            document.getElementById('conceptGateMessage').innerHTML = '✅ **Mastery Complete!** The full answer is now unlocked.';
+            enableFeatureButtons();
+        }
+
+        // --- Vibe Image Generation (via Proxy) ---
+
+        window.generateContextualVibe = async function(text = currentAnswerText) {
+            if (!text) return;
+
+            document.getElementById('vibeImageContainer').innerHTML = `<div class="spinner mx-auto"></div><p class="text-gray-500 mt-2 text-center">Generating scene...</p>`;
+
+            try {
+                // Step 1: Generate an Image Prompt from the text
+                const promptSystemInstruction = "Analyze the following historical text and generate a single, descriptive, artistic prompt for an AI image generator (style: Epic oil painting, historically accurate colors). The prompt must be under 15 words.";
+                
+                const promptPayload = {
+                    contents: [{ parts: [{ text: text }] }],
+                    systemInstruction: { parts: [{ text: promptSystemInstruction }] },
+                };
+
+                const promptResponse = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: promptPayload
+                    })
+                });
+                const promptResult = await promptResponse.json();
+                const imagePrompt = promptResult.candidates?.[0]?.content?.parts?.[0]?.text || "A dramatic historical scene, epic oil painting";
+                
+                console.log("Generated Image Prompt:", imagePrompt);
+                
+                // Step 2: Generate the Image using the derived prompt
+                const imagePayload = { 
+                    instances: { prompt: imagePrompt, aspectRatio: "4:3" }, 
+                };
+
+                const imageResponse = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: IMAGE_MODEL,
+                        method: 'predict', // Crucial: Tells the server to use the :predict endpoint
+                        payload: imagePayload
+                    })
+                });
+
+                const imageResult = await imageResponse.json();
+                const base64Data = imageResult.predictions?.[0]?.bytesBase64Encoded;
+                
+                if (base64Data) {
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    document.getElementById('vibeImageContainer').innerHTML = `<img src="${imageUrl}" alt="Historical Scene Vibe" class="w-full h-full object-cover rounded-lg">`;
+                } else if (imageResult.error) {
+                    document.getElementById('vibeImageContainer').innerHTML = `<p class="text-red-500 text-center p-4">Proxy Error: ${imageResult.error}. Check Node.js console.</p>`;
+                } else {
+                    document.getElementById('vibeImageContainer').innerHTML = `<p class="text-red-500 text-center p-4">Could not generate visual scene.</p>`;
+                }
+
+            } catch (error) {
+                console.error("Vibe Generation Fetch Error:", error);
+                document.getElementById('vibeImageContainer').innerHTML = `<p class="text-red-500 text-center p-4">Network error generating image. Is the Node.js server running?</p>`;
+            } finally {
+                if (!isFullAnswerRevealed) {
+                    setAppState(false);
+                }
+            }
+        };
+
+        // --- Summarize (via Proxy) ---
+
+        window.summarizeAnswer = async function() {
+            if (!currentAnswerText) return;
+
+            setAppState(true, "Summarizing...");
+            const button = document.getElementById('summarizeButton');
+            button.disabled = true;
+            document.getElementById('summaryOutput').classList.remove('hidden');
+            document.getElementById('summaryContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Generating summary...</span>`;
+
+            const systemPrompt = "Analyze the provided historical text and summarize the three most important key points into a concise bulleted list.";
+
+            const payload = {
+                contents: [{ parts: [{ text: `Summarize the following text:\n\n${currentAnswerText}` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (summary) {
+                    document.getElementById('summaryContent').innerHTML = summary;
+                } else {
+                    document.getElementById('summaryContent').innerHTML = `<p class="text-red-500">Could not generate a summary.</p>`;
+                }
+            } catch (error) {
+                console.error("Summarization error:", error);
+                document.getElementById('summaryContent').innerHTML = `<p class="text-red-500">An error occurred during summarization.</p>`;
+            } finally {
+                button.disabled = false;
+                setAppState(false, "Summarized.");
+            }
+        };
+
+        // --- Read Aloud (TTS via Proxy) ---
+
+        window.readAnswerAloud = async function() {
+            if (!currentAnswerText) return;
+
+            setAppState(true, "Generating Audio...");
+            const button = document.getElementById('readAloudButton');
+            button.disabled = true;
+            document.getElementById('audioPlayerContainer').classList.remove('hidden');
+            document.getElementById('audioPlayer').classList.add('hidden');
+            document.getElementById('audioPlayerContainer').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Processing audio...</span>`;
+
+            const payload = {
+                contents: [{ parts: [{ text: currentAnswerText }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Kore" }
+                        }
+                    }
+                },
+            };
+
+            try {
+                const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: TTS_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                    const match = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = match ? parseInt(match[1], 10) : 16000;
+                    
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    audioPlayer.src = audioUrl;
+                    
+                    document.getElementById('audioPlayerContainer').innerHTML = '';
+                    document.getElementById('audioPlayerContainer').appendChild(audioPlayer);
+                    audioPlayer.classList.remove('hidden');
+                    audioPlayer.play();
+                } else {
+                    document.getElementById('audioPlayerContainer').innerHTML = `<p class="text-red-500">Could not generate audio (Format error or unauthorized response).</p>`;
+                }
+            } catch (error) {
+                console.error("TTS error:", error);
+                document.getElementById('audioPlayerContainer').innerHTML = `<p class="text-red-500">An error occurred during audio generation.</p>`;
+            } finally {
+                button.disabled = false;
+                setAppState(false, "Audio ready.");
+            }
+        };
+
+        // Helper functions for PCM to WAV conversion (required for raw audio data)
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            /* RIFF identifier */
+            writeString(view, 0, 'RIFF');
+            /* file length */
+            view.setUint32(4, 36 + samples.length * 2, true);
+            /* RIFF type */
+            writeString(view, 8, 'WAVE');
+            /* format chunk identifier */
+            writeString(view, 12, 'fmt ');
+            /* format chunk length */
+            view.setUint32(16, 16, true);
+            /* sample format (1 for PCM) */
+            view.setUint16(20, 1, true);
+            /* channel count */
+            view.setUint16(22, 1, true);
+            /* sample rate */
+            view.setUint32(24, sampleRate, true);
+            /* byte rate (sample rate * block align) */
+            view.setUint32(28, sampleRate * 2, true);
+            /* block align (channels * bytes per sample) */
+            view.setUint16(32, 2, true);
+            /* bits per sample */
+            view.setUint16(34, 16, true);
+            /* data chunk identifier */
+            writeString(view, 36, 'data');
+            /* data chunk length */
+            view.setUint32(40, samples.length * 2, true);
+
+            /* write the PCM data */
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++, offset += 2) {
+                view.setInt16(offset, samples[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // --- Quiz Generation (via Proxy) ---
+
+        window.generateQuizQuestion = async function() {
+            if (!currentAnswerText) return;
+
+            setAppState(true, "Creating Quiz...");
+            const button = document.getElementById('quizButton');
+            button.disabled = true;
+            document.getElementById('quizOutput').classList.remove('hidden');
+            document.getElementById('quizResult').textContent = '';
+            document.getElementById('quizContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Generating quiz question...</span>`;
+
+            const systemPrompt = "Based on the provided historical text, generate one challenging multiple-choice question. Provide four distinct options (A, B, C, D) and identify the correct letter.";
+            
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    question: { type: "STRING" },
+                    options: {
+                        type: "OBJECT",
+                        properties: {
+                            A: { type: "STRING" },
+                            B: { type: "STRING" },
+                            C: { type: "STRING" },
+                            D: { type: "STRING" }
+                        },
+                        propertyOrdering: ["A", "B", "C", "D"]
+                    },
+                    answer: { type: "STRING", description: "The correct option letter (A, B, C, or D)" }
+                },
+                propertyOrdering: ["question", "options", "answer"]
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: `Generate a multiple-choice quiz question based on this history text:\n\n${currentAnswerText}` }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            try {
+                const response = await safeFetch(PROXY_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: LLM_MODEL,
+                        method: 'generateContent',
+                        payload: payload
+                    })
+                });
+                
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                const quizData = JSON.parse(jsonText);
+
+                if (quizData.question && quizData.options && quizData.answer) {
+                    currentQuizAnswer = quizData.answer;
+                    
+                    let optionsHtml = Object.keys(quizData.options).map(key => `
+                        <button onclick="checkQuizAnswer('${key}')" 
+                                class="quiz-option block w-full text-left p-3 my-2 border border-red-300 rounded-lg hover:bg-red-100 transition duration-150">
+                            <strong>${key}:</strong> ${quizData.options[key]}
+                        </button>
+                    `).join('');
+                    
+                    document.getElementById('quizContent').innerHTML = `
+                        <p class="font-semibold mb-3">${quizData.question}</p>
+                        <div id="quizOptions">${optionsHtml}</div>
+                    `;
+                } else {
+                    document.getElementById('quizContent').innerHTML = `<p class="text-red-500">Could not generate a structured quiz question.</p>`;
+                }
+            } catch (error) {
+                console.error("Quiz generation error:", error);
+                document.getElementById('quizContent').innerHTML = `<p class="text-red-500">An error occurred during quiz generation. (Check Console for details)</p>`;
+            } finally {
+                button.disabled = false;
+                setAppState(false, "Quiz ready.");
+            }
+        };
+        
+        window.checkQuizAnswer = function(selectedAnswer) {
+            const resultElement = document.getElementById('quizResult');
+            const options = document.querySelectorAll('.quiz-option');
+            
+            options.forEach(button => {
+                button.disabled = true; // Disable further clicks
+                const key = button.textContent.split(':')[0].trim();
+                
+                if (key === currentQuizAnswer) {
+                    button.classList.add('bg-green-200', 'border-green-500');
+                    button.classList.remove('hover:bg-red-100');
+                } else if (key === selectedAnswer) {
+                    button.classList.add('bg-red-200', 'border-red-500');
+                    button.classList.remove('hover:bg-red-100');
+                }
+            });
+
+            if (selectedAnswer === currentQuizAnswer) {
+                resultElement.innerHTML = '<span class="text-green-600">✅ Correct! Excellent recall.</span>';
+            } else {
+                resultElement.innerHTML = `<span class="text-red-600">❌ Incorrect. The correct answer was <strong>${currentQuizAnswer}</strong>. Review the answer above!</span>`;
+            }
+        };
+    </script>
+</body>
+</html>
