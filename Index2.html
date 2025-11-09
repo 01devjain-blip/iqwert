@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI by Aksh</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* UPDATED: Changed font to EB Garamond */
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&display=swap');
+        
+        body {
+            /* UPDATED: Set new font and background color */
+            font-family: 'EB Garamond', serif;
+            background-color: #fdfbf6; /* Parchment/beige background */
+        }
+
+        /* Loading indicator spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            /* UPDATED: Changed spinner color to match new theme */
+            border-left-color: #854d0e; /* amber-700 */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* UPDATED: Concept Button Styles */
+        .concept-btn {
+            background-color: #fef3c7; /* amber-100 */
+            color: #92400e; /* amber-800 */
+            padding: 0.5rem 1rem;
+            border-radius: 9999px; /* Rounded pill shape */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .concept-btn:hover:not(.mastered) {
+            background-color: #fde68a; /* amber-200 */
+        }
+        
+        .concept-btn.mastered {
+            background-color: #10b981; /* Green (Kept for 'success') */
+            color: white;
+            cursor: default;
+            border-color: #059669;
+        }
+        
+        .concept-btn.active-explaining {
+            border-color: #b45309; /* amber-700 */
+            transform: scale(1.05);
+        }
+        
+        /* Image Placeholder for Vibe */
+        .vibe-placeholder {
+            min-height: 200px;
+        }
+
+        /* Basic Markdown rendering for structured text */
+        #answerContent h1, #answerContent h2, #answerContent h3 {
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        #answerContent h2 { font-size: 1.5rem; }
+        #answerContent ul { list-style: disc; margin-left: 1.5rem; padding-left: 0.5rem; }
+        #answerContent ol { list-style: decimal; margin-left: 1.5rem; padding-left: 0.5rem; }
+
+    </style>
+</head>
+<!-- UPDATED: body background class removed, set in CSS -->
+<body class="p-4 sm:p-8 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header: Updated Name & Color -->
+        <header class="text-center mb-8">
+            <!-- UPDATED: text-blue-800 -> text-stone-800 -->
+            <h1 class="text-4xl font-extrabold text-stone-800">AI by Aksh 🏛️</h1>
+            <!-- UPDATED: text-gray-600 -> text-stone-600 -->
+            <p class="text-stone-600 mt-2">Ask any historical question to get a grounded answer and unlock powerful learning tools.</p>
+        </header>
+
+        <!-- Question Input -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <label for="historyQuery" class="block text-lg font-medium text-gray-700 mb-3">Your History Question:</label>
+            <textarea id="historyQuery" rows="3" placeholder="e.g., What caused the fall of the Roman Empire?"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 transition duration-150 ease-in-out resize-none"></textarea>
+            
+            <div class="flex justify-end mt-4">
+                <!-- UPDATED: Button color bg-blue-600 -> bg-stone-700 -->
+                <button id="queryButton" class="px-6 py-3 bg-stone-700 text-white font-semibold rounded-lg shadow-md hover:bg-stone-800 transition duration-150 ease-in-out flex items-center" onclick="getHistoricalAnswer()">
+                    <span id="buttonText">Get Historical Answer</span>
+                    <div id="loadingIndicator" class="spinner ml-2 hidden"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Output Container -->
+        <div id="outputContainer" class="hidden">
+            <div class="space-y-6">
+
+                <!-- Generated Vibe Image -->
+                <div class="bg-white p-4 rounded-xl shadow-lg border-2 border-dashed border-gray-300">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="mr-2">🎨</span> Historical Scene Vibe (Image)
+                        <!-- UPDATED: text-blue-600 -> text-amber-700 -->
+                        <button id="vibeButton" class="ml-auto text-sm text-amber-700 hover:text-amber-900 focus:outline-none" onclick="generateContextualVibe()" disabled>
+                            Re-generate Vibe
+                        </button>
+                    </h2>
+                    <div id="vibeImageContainer" class="w-full aspect-video flex justify-center items-center bg-gray-50 rounded-lg overflow-hidden vibe-placeholder">
+                        <p class="text-gray-400 text-center p-4">A custom, contextual image will appear here automatically.</p>
+                    </div>
+                </div>
+
+                <!-- 🔍 Concept Gate (Active Learning Step) -->
+                <div id="conceptGateContainer" class="bg-white p-6 rounded-xl shadow-lg">
+                    <!-- UPDATED: text-indigo-700 -> text-amber-800 -->
+                    <h2 class="text-2xl font-bold text-amber-800 mb-4 flex items-center">
+                        <span class="mr-2">🔍</span> Knowledge Pre-check
+                    </h2>
+                    <p id="conceptGateMessage" class="text-stone-600 mb-4">Click each key concept below to get a quick definition. Master all concepts to unlock the full historical answer.</p>
+                    
+                    <div id="conceptTagsContainer" class="flex flex-wrap gap-3 mb-6 min-h-[4rem]">
+                        <!-- Concept buttons will be injected here -->
+                    </div>
+
+                    <!-- UPDATED: Panel colors changed from indigo to amber -->
+                    <div id="conceptExplanationPanel" class="p-4 border-l-4 border-amber-500 bg-amber-50 text-amber-900 rounded-r-lg hidden">
+                        <h3 class="font-bold text-lg mb-1">Concept Explanation:</h3>
+                        <div id="explanationContent">Click a concept above to learn about it.</div>
+                    </div>
+                </div>
+
+                <!-- Main Answer Section -->
+                <div class="bg-white p-6 rounded-xl shadow-lg transition duration-500 hidden" id="answerBox">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Historical Answer (Unlocked!)</h2>
+                    <div id="answerContent" class="text-gray-700 leading-relaxed min-h-[100px] text-justify">
+                        <!-- Answer will be injected here -->
+                    </div>
+                    <div id="sourcesContainer" class="mt-4 border-t pt-4 text-sm text-gray-500">
+                        <!-- Sources will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Feature Buttons & Outputs -->
+                <div id="featureButtonsContainer" class="bg-white p-6 rounded-xl shadow-lg hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        <!-- Summarize Button -->
+                        <!-- UPDATED: Button color bg-yellow-500 -> bg-blue-700 (for scholarly blue contrast) -->
+                        <button id="summarizeButton" class="feature-btn bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center disabled:opacity-50" 
+                                onclick="summarizeAnswer()" disabled>
+                            <span class="mr-2">✨</span> Summarize Key Points
+                        </button>
+                        
+                        <!-- Read Aloud Button REMOVED -->
+
+                        <!-- Quiz Button -->
+                        <!-- UPDATED: Button color bg-red-600 -> bg-orange-700 -->
+                        <button id="quizButton" class="feature-btn bg-orange-700 hover:bg-orange-800 text-white font-semibold py-3 rounded-lg flex items-center justify-center disabled:opacity-50" 
+                                onclick="generateQuizQuestion()" disabled>
+                            <span class="mr-2">❓</span> Generate Quiz Question
+                        </button>
+                    </div>
+
+                    <!-- Audio Player REMOVED -->
+                    <div id="audioPlayerContainer" class="mt-4 hidden p-3 bg-gray-50 rounded-lg">
+                        <audio id="audioPlayer" controls class="w-full"></audio>
+                    </div>
+
+                    <!-- Summary Output -->
+                    <!-- UPDATED: Panel color from yellow to blue (to match button) -->
+                    <div id="summaryOutput" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-300 hidden">
+                        <h3 class="font-bold text-blue-800 mb-2">Key Takeaways:</h3>
+                        <div id="summaryContent"></div>
+                    </div>
+
+                    <!-- Quiz Output -->
+                    <!-- UPDATED: Panel color from red to orange (to match button) -->
+                    <div id="quizOutput" class="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-300 hidden">
+                        <h3 class="font-bold text-orange-800 mb-3">Knowledge Check:</h3>
+                        <div id="quizContent"></div>
+                        <div id="quizResult" class="mt-3 font-semibold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Firebase, API Calls, and Logic (with color-related updates) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables (provided by Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Global Variables
+        let db;
+        let auth;
+        let userId;
+        let currentAnswerText = "";
+        let currentQuizAnswer = "";
+        // New variables for Concept Gate
+        let conceptsToMaster = []; // Array of concept strings
+        let masteredConcepts = new Set(); // Set of mastered concept strings
+        let isFullAnswerRevealed = false;
+
+        setLogLevel('Debug');
+
+        // --- Firebase Initialization and Auth ---
+
+        async function initFirebase() {
+            if (firebaseConfig) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    console.log("Firebase initialized. User ID:", userId);
+
+                    // A placeholder Firestore interaction (required by firestore mandate)
+                    const userDocRef = doc(db, "artifacts", appId, "users", userId, "history_app", "status");
+                    await setDoc(userDocRef, { lastAccess: new Date(), version: 2 }, { merge: true });
+
+                } catch (error) {
+                    console.error("Error initializing Firebase or signing in:", error);
+                }
+            } else {
+                console.error("Firebase config is missing. App will run without persistence.");
+                userId = crypto.randomUUID();
+            }
+        }
+        
+        initFirebase();
+
+        // --- API & Utility Functions ---
+
+        const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
+        const IMAGE_MODEL = 'imagen-3.0-generate-002';
+        // const TTS_MODEL = 'gemini-2.5-flash-preview-tts'; // REMOVED
+        
+        // FIX: A 401 error indicates an issue with the API Key.
+        // If the app is not working (e.g., you see a 401 error in the console),
+        // replace the empty string "" below with your own personal API Key
+        // from Google AI Studio.
+        const API_KEY = "";
+
+        async function safeFetch(url, options, maxRetries = 3) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        if (response.status === 429 && attempt < maxRetries - 1) {
+                            const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                            console.warn(`Rate limit hit, retrying in ${delay / 1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        throw new Error(`API request failed with status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    console.error(`Fetch attempt ${attempt + 1} failed:`, error);
+                    if (attempt === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        // Fix for btoa InvalidCharacterError on non-Latin-1 strings
+        function safeBtoa(str) {
+            try {
+                return btoa(str);
+            } catch (e) {
+                if (e.name === 'InvalidCharacterError') {
+                    // Encode to UTF-8 using TextEncoder, then convert the byte array to a binary string
+                    const utf8Bytes = new TextEncoder().encode(str);
+                    const binaryString = String.fromCodePoint(...utf8Bytes);
+                    return btoa(binaryString);
+                }
+                throw e;
+            }
+        }
+
+        function setAppState(isLoading, message = "Getting Historical Answer...") {
+            const button = document.getElementById('queryButton');
+            const buttonText = document.getElementById('buttonText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            
+            button.disabled = isLoading;
+            buttonText.textContent = isLoading ? message : "Get Historical Answer";
+            loadingIndicator.classList.toggle('hidden', !isLoading);
+
+            // Disable feature buttons only if the full answer is not yet revealed
+            if (!isFullAnswerRevealed) {
+                document.querySelectorAll('.feature-btn').forEach(btn => btn.disabled = isLoading || !isFullAnswerRevealed);
+                document.getElementById('vibeButton').disabled = isLoading || !isFullAnswerRevealed;
+            }
+        }
+
+        function enableFeatureButtons() {
+            document.querySelectorAll('.feature-btn').forEach(btn => btn.disabled = false);
+            document.getElementById('vibeButton').disabled = false;
+        }
+
+        // --- Core Q&A Function (with Grounding) ---
+
+        window.getHistoricalAnswer = async function() {
+            const query = document.getElementById('historyQuery').value.trim();
+            if (!query) return;
+
+            // Reset state
+            isFullAnswerRevealed = false;
+            currentAnswerText = "";
+            masteredConcepts.clear();
+            conceptsToMaster = [];
+
+            setAppState(true, "Searching the Archives...");
+            document.getElementById('outputContainer').classList.remove('hidden');
+            document.getElementById('answerBox').classList.add('hidden'); // Hide final answer box
+            document.getElementById('featureButtonsContainer').classList.add('hidden'); // Hide features
+            document.getElementById('answerContent').innerHTML = `<p class="text-gray-500">Awaiting concept mastery...</p>`;
+            document.getElementById('sourcesContainer').innerHTML = '';
+            document.getElementById('vibeImageContainer').innerHTML = `<p class="text-gray-400 text-center p-4">Preparing visual context...</p>`;
+            document.getElementById('conceptExplanationPanel').classList.add('hidden');
+            document.getElementById('explanationContent').innerHTML = `Click a concept above to learn about it.`;
+            document.getElementById('conceptTagsContainer').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Extracting key concepts...</span>`;
+            
+            // Clear previous outputs
+            document.getElementById('summaryOutput').classList.add('hidden');
+            document.getElementById('quizOutput').classList.add('hidden');
+            document.getElementById('audioPlayerContainer').classList.add('hidden');
+
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+            // FIX: Updated system prompt to request plain text only, no Markdown.
+            const systemPrompt = "You are a world-class history tutor. Provide a detailed, engaging, and well-structured answer to the user's historical question. Use plain text only. DO NOT use any Markdown formatting (no headings, no bold, no bullet points, no asterisks). Use line breaks to separate paragraphs and ideas to ensure readability. DO NOT use dense paragraphs or essay format.";
+
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await safeFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    currentAnswerText = candidate.content.parts[0].text;
+                    
+                    // Display sources (even if answer is not fully revealed)
+                    let sourcesHtml = 'Sources: ';
+                    const groundingMetadata = candidate.groundingMetadata;
+                    let sources = [];
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attr => attr.web)
+                            .filter(web => web && web.uri && web.title);
+                    }
+                    
+                    if (sources.length > 0) {
+                        sourcesHtml += sources.map(source => 
+                            // UPDATED: text-blue-500 -> text-amber-700
+                            `<a href="${source.uri}" target="_blank" class="text-amber-700 hover:underline">${source.title}</a>`
+                        ).join(' | ');
+                    } else {
+                        sourcesHtml += 'No specific sources found.';
+                    }
+                    document.getElementById('sourcesContainer').innerHTML = sourcesHtml;
+                    
+                    // 1. Run Concept Gate
+                    await generateConceptGate(currentAnswerText);
+
+                    // 2. Automatically trigger image generation
+                    generateContextualVibe(currentAnswerText);
+
+                } else {
+                    document.getElementById('answerContent').innerHTML = `<p class="text-red-500">Error: Could not generate a historical answer. Please try a different question.</p>`;
+                }
+            } catch (error) {
+                console.error("Main Q&A error:", error);
+                document.getElementById('answerContent').innerHTML = `<p class="text-red-500">An error occurred while connecting to the AI service. Please check your network connection and try again.</p>`;
+            } finally {
+                setAppState(false);
+            }
+        };
+
+        // --- New Feature: Concept Gate Logic ---
+
+        async function generateConceptGate(text) {
+            document.getElementById('conceptGateContainer').classList.remove('hidden');
+            document.getElementById('conceptExplanationPanel').classList.remove('hidden');
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+            const systemPrompt = "Analyze the provided historical text and extract 5 to 7 of the most important key concepts, people, or events. Only return the terms as a JSON array of strings.";
+            
+            const schema = {
+                type: "ARRAY",
+                items: { type: "STRING" }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: `Extract key concepts from this text:\n\n${text}` }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            try {
+                const response = await safeFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                const concepts = JSON.parse(jsonText);
+                conceptsToMaster = concepts;
+                
+                if (concepts && concepts.length > 0) {
+                    const tagsHtml = concepts.map(concept => `
+                        <button id="concept-${safeBtoa(concept)}" class="concept-btn" onclick="explainConcept(this, '${concept.replace(/'/g, "\\'")}')">
+                            ${concept}
+                        </button>
+                    `).join('');
+                    
+                    document.getElementById('conceptTagsContainer').innerHTML = tagsHtml;
+                } else {
+                    // Fallback: If concepts cannot be extracted, reveal answer immediately
+                    document.getElementById('conceptTagsContainer').innerHTML = `<p class="text-red-500">Could not extract concepts. Unlocking answer.</p>`;
+                    revealFullAnswer();
+                }
+
+            } catch (error) {
+                console.error("Concept Gate generation error:", error);
+                document.getElementById('conceptTagsContainer').innerHTML = `<p class="text-red-500">Error generating concept tags. Unlocking answer.</p>`;
+                revealFullAnswer(); // Fail safe to unlock the app
+            }
+        }
+        
+        window.explainConcept = async function(buttonElement, concept) {
+            if (buttonElement.classList.contains('mastered')) return;
+
+            // Mark the currently active button
+            document.querySelectorAll('.concept-btn').forEach(btn => btn.classList.remove('active-explaining'));
+            buttonElement.classList.add('active-explaining');
+
+            document.getElementById('explanationContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Explaining "${concept}"...</span>`;
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+            // FIX: Updated system prompt to request plain text only.
+            const systemPrompt = `You are a concise tutor. Provide a single, 1-2 sentence definition or explanation for the concept: "${concept}", drawing context from the main historical answer provided below. Use plain text only, no Markdown.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Original Answer Context:\n\n${currentAnswerText}` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await safeFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const explanation = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (explanation) {
+                    // FIX: Convert newlines to <br> for proper rendering
+                    document.getElementById('explanationContent').innerHTML = explanation.replace(/\n/g, '<br>');
+                    
+                    // Mark as mastered only after successful explanation
+                    buttonElement.classList.remove('active-explaining');
+                    buttonElement.classList.add('mastered');
+                    masteredConcepts.add(concept);
+                    
+                    // Check if all concepts are mastered
+                    if (masteredConcepts.size === conceptsToMaster.length) {
+                        revealFullAnswer();
+                    }
+                } else {
+                    document.getElementById('explanationContent').innerHTML = `<p class="text-red-500">Could not generate explanation for ${concept}.</p>`;
+                }
+            } catch (error) {
+                console.error("Concept explanation error:", error);
+                document.getElementById('explanationContent').innerHTML = `<p class="text-red-500">An error occurred while explaining the concept.</p>`;
+            }
+        }
+        
+        function revealFullAnswer() {
+            isFullAnswerRevealed = true;
+            document.getElementById('answerBox').classList.remove('hidden');
+            document.getElementById('featureButtonsContainer').classList.remove('hidden');
+            
+            // FIX: Convert newlines to <br> tags for proper HTML rendering
+            const formattedAnswer = currentAnswerText.replace(/\n/g, '<br>');
+            document.getElementById('answerContent').innerHTML = formattedAnswer;
+
+            document.getElementById('conceptGateMessage').innerHTML = '✅ **Mastery Complete!** The full answer is now unlocked.';
+            enableFeatureButtons();
+        }
+
+        // --- Existing Features (Unchanged Logic, Renamed Context) ---
+
+        window.generateContextualVibe = async function(text = currentAnswerText) {
+            if (!text) return;
+
+            // Set loading state for vibe image
+            document.getElementById('vibeImageContainer').innerHTML = `<div class="spinner mx-auto"></div><p class="text-gray-500 mt-2 text-center">Generating scene...</p>`;
+
+            try {
+                // Step 1: Generate an Image Prompt from the text
+                const promptUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+                // FIX: Updated prompt to request plain text.
+                const promptSystemInstruction = "Analyze the following historical text and generate a single, descriptive, artistic prompt for an AI image generator (style: Epic oil painting, historically accurate colors). The prompt must be under 15 words and contain only plain text.";
+                
+                const promptPayload = {
+                    contents: [{ parts: [{ text: text }] }],
+                    systemInstruction: { parts: [{ text: promptSystemInstruction }] },
+                };
+
+                const promptResponse = await safeFetch(promptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(promptPayload)
+                });
+                const promptResult = await promptResponse.json();
+                const imagePrompt = promptResult.candidates?.[0]?.content?.parts?.[0]?.text || "A dramatic historical scene, epic oil painting";
+                
+                console.log("Generated Image Prompt:", imagePrompt);
+                
+                // Step 2: Generate the Image using the derived prompt
+                const imageUrl = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:predict?key=${API_KEY}`;
+                
+                const imagePayload = { 
+                    instances: [{ prompt: imagePrompt }], 
+                    parameters: { 
+                        "sampleCount": 1,
+                        "aspectRatio": "4:3"
+                    } 
+                };
+
+                const imageResponse = await safeFetch(imageUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(imagePayload)
+                });
+
+                const imageResult = await imageResponse.json();
+                const base64Data = imageResult.predictions?.[0]?.bytesBase64Encoded;
+                
+                if (base64Data) {
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    document.getElementById('vibeImageContainer').innerHTML = `<img src="${imageUrl}" alt="Historical Scene Vibe" class="w-full h-full object-cover rounded-lg">`;
+                } else {
+                    document.getElementById('vibeImageContainer').innerHTML = `<p class="text-red-500 text-center p-4">Could not generate visual scene.</p>`;
+                }
+
+            } catch (error) {
+                console.error("Vibe Generation error:", error);
+                document.getElementById('vibeImageContainer').innerHTML = `<p class="text-red-500 text-center p-4">Error generating image. (Check Console for details)</p>`;
+            } finally {
+                if (!isFullAnswerRevealed) {
+                    setAppState(false);
+                }
+            }
+        };
+
+        window.summarizeAnswer = async function() {
+            if (!currentAnswerText) return;
+
+            setAppState(true, "Summarizing...");
+            const button = document.getElementById('summarizeButton');
+            button.disabled = true;
+            document.getElementById('summaryOutput').classList.remove('hidden');
+            document.getElementById('summaryContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Generating summary...</span>`;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+            // FIX: Updated prompt to request a plain text list, no Markdown.
+            const systemPrompt = "Analyze the provided historical text and summarize the three most important key points. Use a plain text numbered list (e.g., '1. Point one', '2. Point two'). Do not use Markdown bullet points (no asterisks).";
+
+            const payload = {
+                contents: [{ parts: [{ text: `Summarize the following text:\n\n${currentAnswerText}` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await safeFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (summary) {
+                    // FIX: Convert newlines to <br> for proper rendering
+                    document.getElementById('summaryContent').innerHTML = summary.replace(/\n/g, '<br>');
+                } else {
+                    document.getElementById('summaryContent').innerHTML = `<p class="text-red-500">Could not generate a summary.</p>`;
+                }
+            } catch (error) {
+                console.error("Summarization error:", error);
+                document.getElementById('summaryContent').innerHTML = `<p class="text-red-500">An error occurred during summarization.</p>`;
+            } finally {
+                button.disabled = false;
+                setAppState(false, "Summarized.");
+            }
+        };
+
+        // --- readAnswerAloud function and its helpers REMOVED ---
+        // (The HTML and grid layout were already adjusted for its removal)
+
+        window.generateQuizQuestion = async function() {
+            if (!currentAnswerText) return;
+
+            setAppState(true, "Creating Quiz...");
+            const button = document.getElementById('quizButton');
+            button.disabled = true;
+            document.getElementById('quizOutput').classList.remove('hidden');
+            document.getElementById('quizResult').textContent = '';
+            document.getElementById('quizContent').innerHTML = `<div class="spinner"></div><span class="ml-2 text-gray-700">Generating quiz question...</span>`;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
+            // FIX: Updated prompt to request plain text in output.
+            const systemPrompt = "Based on the provided historical text, generate one challenging multiple-choice question. The question and options should be plain text. Provide four distinct options (A, B, C, D) and identify the correct letter.";
+            
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    question: { type: "STRING" },
+                    options: {
+                        type: "OBJECT",
+                        properties: {
+                            A: { type: "STRING" },
+                            B: { type: "STRING" },
+                            C: { type: "STRING" },
+                            D: { type: "STRING" }
+                        },
+                        propertyOrdering: ["A", "B", "C", "D"]
+                    },
+                    answer: { type: "STRING", description: "The correct option letter (A, B, C, or D)" }
+                },
+                propertyOrdering: ["question", "options", "answer"]
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: `Generate a multiple-choice quiz question based on this history text:\n\n${currentAnswerText}` }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            try {
+                const response = await safeFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                const quizData = JSON.parse(jsonText);
+
+                if (quizData.question && quizData.options && quizData.answer) {
+                    currentQuizAnswer = quizData.answer;
+                    
+                    let optionsHtml = Object.keys(quizData.options).map(key => `
+                        <button onclick="checkQuizAnswer('${key}')" 
+                                /* UPDATED: border/hover colors from red to orange */
+                                class="quiz-option block w-full text-left p-3 my-2 border border-orange-300 rounded-lg hover:bg-orange-100 transition duration-150">
+                            <strong>${key}:</strong> ${quizData.options[key]}
+                        </button>
+                    `).join('');
+                    
+                    document.getElementById('quizContent').innerHTML = `
+                        <p class="font-semibold mb-3">${quizData.question.replace(/\n/g, '<br>')}</p>
+                        <div id="quizOptions">${optionsHtml}</div>
+                    `;
+                } else {
+                    document.getElementById('quizContent').innerHTML = `<p class="text-red-500">Could not generate a structured quiz question.</p>`;
+                }
+            } catch (error) {
+                console.error("Quiz generation error:", error);
+                document.getElementById('quizContent').innerHTML = `<p class="text-red-500">An error occurred during quiz generation. (Check Console for details)</p>`;
+            } finally {
+                button.disabled = false;
+                setAppState(false, "Quiz ready.");
+            }
+        };
+        
+        window.checkQuizAnswer = function(selectedAnswer) {
+            const resultElement = document.getElementById('quizResult');
+            const options = document.querySelectorAll('.quiz-option');
+            
+            options.forEach(button => {
+                button.disabled = true; // Disable further clicks
+                const key = button.textContent.split(':')[0].trim();
+                
+                if (key === currentQuizAnswer) {
+                    button.classList.add('bg-green-200', 'border-green-500');
+                    /* UPDATED: remove orange hover */
+                    button.classList.remove('hover:bg-orange-100');
+                } else if (key === selectedAnswer) {
+                    /* UPDATED: colors from red to orange */
+                    button.classList.add('bg-orange-200', 'border-orange-500');
+                    button.classList.remove('hover:bg-orange-100');
+                }
+            });
+
+            if (selectedAnswer === currentQuizAnswer) {
+                resultElement.innerHTML = '<span class="text-green-600">✅ Correct! Excellent recall.</span>';
+            } else {
+                /* UPDATED: text color from red to orange */
+                resultElement.innerHTML = `<span class="text-orange-600">❌ Incorrect. The correct answer was <strong>${currentQuizAnswer}</strong>. Review the answer above!</span>`;
+            }
+        };
+    </script>
+</body>
+</html>
